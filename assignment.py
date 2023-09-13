@@ -55,7 +55,9 @@ class SequentialModelBasedOptimization(object):
         ei = self.expected_improvement(self.model, self.theta_inc_performance, capital_theta)
         # TODO: ei now contains for each element in capital_theta the expected improvement
         # return the element in capital_theta with the highest expected improvement
-        raise NotImplementedError()
+        # raise NotImplementedError()
+    
+        return capital_theta[np.argmax(ei)]
 
     @staticmethod
     def expected_improvement(model: sklearn.gaussian_process.GaussianProcessRegressor,
