@@ -74,8 +74,8 @@ class SequentialModelBasedOptimization(object):
         configuration
         """
         # TODO: see slides lecture 2
-        
-        raise NotImplementedError()
+        m, s = model.predict(theta, return_std=True)
+        return (m-f_star)*norm.cdf((m-f_star)/s) + s*norm.pdf((m-f_star)/s)
 
     def update_runs(self, run: typing.Tuple[np.array, float]):
         """
@@ -89,4 +89,6 @@ class SequentialModelBasedOptimization(object):
         """
         self.capital_r.append(run)
         # TODO: update theta_inc and theta_performance, if needed
-        raise NotImplementedError()
+        if run[1] > self.theta_inc_performance: 
+            self.theta_inc = run[0]
+            self.theta_inc_performance = run[1]
