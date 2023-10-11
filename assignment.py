@@ -53,10 +53,6 @@ class SequentialModelBasedOptimization(object):
         configuration
         """
         ei = self.expected_improvement(self.model, self.theta_inc_performance, capital_theta)
-        # TODO: ei now contains for each element in capital_theta the expected improvement
-        # return the element in capital_theta with the highest expected improvement
-        # raise NotImplementedError()
-    
         return capital_theta[np.argmax(ei)]
 
     @staticmethod
@@ -73,7 +69,6 @@ class SequentialModelBasedOptimization(object):
         :return: A size n vector, same size as each element representing the EI of a given
         configuration
         """
-        # TODO: see slides lecture 2
         m, s = model.predict(theta, return_std=True)
         return (m-f_star)*norm.cdf((m-f_star)/s) + s*norm.pdf((m-f_star)/s)
 
@@ -88,7 +83,6 @@ class SequentialModelBasedOptimization(object):
         :param run: A 1D vector, each element represents a hyperparameter
         """
         self.capital_r.append(run)
-        # TODO: update theta_inc and theta_performance, if needed
         if run[1] > self.theta_inc_performance: 
             self.theta_inc = run[0]
             self.theta_inc_performance = run[1]
