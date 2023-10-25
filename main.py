@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from ConfigSpace import ConfigurationSpace, UniformFloatHyperparameter
+from ConfigSpace import ConfigurationSpace, UniformFloatHyperparameter, UniformIntegerHyperparameter
 from ConfigSpace.util import generate_grid
 
 from sklearn.svm import SVR
@@ -14,11 +14,11 @@ from tqdm import tqdm, trange
 from assignment import SequentialModelBasedOptimization
 
 import warnings
-# warnings.filterwarnings("ignore")
+warnings.filterwarnings("ignore")
 
 
 class ModelTest():
-    def __init__(self, model, dataset, hyperparameter_space, random_state=0):
+    def __init__(self, model, dataset, hyperparameter_space, random_state=1):
         self.random_state = random_state
         np.random.seed(self.random_state)
         self.model = model
@@ -36,6 +36,7 @@ class ModelTest():
 
     def optimizee(self, config):
         model = self.model()
+        config = {key: val if round(val) != val else int(val) for key, val in config.items()}
         model.set_params(**config)
         model.fit(self.X_train, self.y_train)
         return model.score(self.X_valid, self.y_valid)
@@ -53,21 +54,10 @@ class ModelTest():
     
 
     def test_grid(self, n_configs):
-        configurations = self.grid_cs(n_configs)
-        n = len(configurations)
-
-        perf = np.zeros(n)
-
-        theta_inc_performance = 0
-
-        for i, config in tqdm(enumerate(configurations), total=n):
-            # print(f"grid search iteration {i+1}/{len(configurations)}")
-            performance = self.optimizee(config)
-            theta_inc_performance = max(theta_inc_performance, performance)
-            # print(f"perf {theta_inc_performance}")
-            # print('----------------------------')
-            perf[i] = theta_inc_performance
-
+        configs = self.grid_cs(n_configs)
+        perf = np.zeros(n_configs)
+        for i, config in tqdm(enumerate(configs), total=n_configs):
+            perf[i] = max(perf[i-1], self.optimizee(config))
         return perf
     
     def test_rand(self, n_configs):
@@ -78,7 +68,7 @@ class ModelTest():
         return perf
     
 
-    def test_smbo(self, n_iter, n_configs_init=8, n_configs_loop=2048):
+    def test_smbo(self, n_iter, n_configs_init=3, n_configs_loop=128):
         def sample_configs(n_configs):
             return np.array([
                 [value for _, value in config.items()]
@@ -94,14 +84,15 @@ class ModelTest():
         smbo = SequentialModelBasedOptimization()
         smbo.initialize(sample_init_configs(self.sample_cs(n_configs_init)))
 
-        perf = np.zeros(n_iter)
+        perf = np.zeros(n_iter).astype(float)
+        perf[:n_configs_init] = np.nan
 
-        for idx in trange(n_iter):
+        for idx in trange(n_iter - n_configs_init):
             smbo.fit_model()
             config = smbo.select_configuration(sample_configs(n_configs_loop))
             performance = self.optimizee({hyp : val for hyp, val in zip(self.hyperparams, config)})
             smbo.update_runs((config, performance))
-            perf[idx] = smbo.theta_inc_performance
+            perf[idx+n_configs_init] = smbo.theta_inc_performance
 
         return perf
 
@@ -121,7 +112,7 @@ class ModelTest():
         plt.show()
         
 
-def svr_test(datasets, n_configs):
+def svr_test(datasets, n_configs, smbo_n_init_configs=8, smbo_n_samples=128):
     hyperparameter_space = [
         UniformFloatHyperparameter(
             name='C', lower=0.03125, upper=32768, log=True, default_value=1.0
@@ -145,16 +136,28 @@ def svr_test(datasets, n_configs):
 
 def random_forest_test(datasets, n_configs):
     hyperparameter_space = [
+        UniformIntegerHyperparameter(
+            name='n_estimators', lower=8, upper=512, log=True, default_value=32
+        ),
+        UniformIntegerHyperparameter(
+            name='max_depth', lower=2, upper=64, log=True, default_value=8
+        ),
+        UniformIntegerHyperparameter(
+            name='min_samples_split', lower=2, upper=32, log=True, default_value=8
+        ),
+        UniformIntegerHyperparameter(
+            name='min_samples_leaf', lower=2, upper=32, log=True, default_value=8
+        ),
         UniformFloatHyperparameter(
-            name='alpha', lower=0.1, upper=.2, log=True, default_value=.15
+            name='max_features', lower=.1, upper=.9, log=True, default_value=.9
         )
     ]
 
-    from sklearn.linear_model import Lasso
+    from sklearn.ensemble import RandomForestRegressor
 
     for dataset in datasets.items():
         test = ModelTest(
-            Lasso,
+            RandomForestRegressor,
             dataset,
             hyperparameter_space,
             random_state=0
@@ -171,12 +174,12 @@ def main():
         'quake': 209,
         'wine_quality': 43994
     }
-    # TODO : support classification datasets ? data.target needs to be converted from strings to ints
+
     # TODO : (optional) sommige datasets hebben pre-processing nodig van string bv naar one-hot encoding,
     #        misschien gewoon makkelijke datasets kiezen die dit niet hebben om het zo makkelijk mogelijk te maken
 
-    svr_test(datasets, n_configs=16)
-    # random_forest_test(datasets, n_configs=64)
+    svr_test(datasets, n_configs=25, smbo_n_init_configs=8, smbo_n_samples=128)
+    # random_forest_test(datasets, n_configs=243)
 
 
 if __name__ == '__main__':
