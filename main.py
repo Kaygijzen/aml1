@@ -168,7 +168,8 @@ def main():
     # datasets : https://www.openml.org/search?type=data&status=active
     datasets = {
         'boston-housing' : 43465,
-        # 'iris': 61
+        'quake': 209,
+        'wine_quality': 43994
     }
     # TODO : support classification datasets ? data.target needs to be converted from strings to ints
     # TODO : (optional) sommige datasets hebben pre-processing nodig van string bv naar one-hot encoding,
