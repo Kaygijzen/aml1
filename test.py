@@ -61,32 +61,45 @@ class TestMetaModels(unittest.TestCase):
             clf.fit(X_train, y_train)
             return sklearn.metrics.accuracy_score(y_valid, clf.predict(X_valid))
 
-        def sample_configurations(n_configurations):
+        def sample_configurations(
+                n_configurations,
+                config_space: ConfigSpace.ConfigurationSpace
+        ):
             # function uses the ConfigSpace package, as developed at Freiburg University.
             # most of this functionality can also be achieved by the scipy package
             # same hyperparameter configuration as in scikit-learn
-            cs = ConfigSpace.ConfigurationSpace('sklearn.svm.SVC', 1)
 
-            C = ConfigSpace.UniformFloatHyperparameter(
-                name='C', lower=0.03125, upper=32768, log=True, default_value=1.0)
-            gamma = ConfigSpace.UniformFloatHyperparameter(
-                name='gamma', lower=3.0517578125e-05, upper=8, log=True, default_value=0.1)
-            cs.add_hyperparameters([C, gamma])
+            return [(configuration['gamma'],
+                     configuration['C'])
+                    for configuration in config_space.sample_configuration(n_configurations)]
 
-            return np.array([(configuration['gamma'],
-                              configuration['C'])
-                            for configuration in cs.sample_configuration(n_configurations)])
-
-        def sample_initial_configurations(n: int) -> typing.List[typing.Tuple[np.array, float]]:
-            configs = sample_configurations(n)
+        def sample_initial_configurations(
+                n: int,
+                config_space: ConfigSpace.ConfigurationSpace
+        ) -> typing.List[typing.Tuple[np.array, float]]:
+            configs = sample_configurations(n, config_space=config_space)
             return [((gamma, C), optimizee(gamma, C)) for gamma, C in configs]
 
+        # TODO: initialize your config space here
+        # Example follows
+        config_space = ConfigSpace.ConfigurationSpace('sklearn.svm.SVC', 1)
+        C = ConfigSpace.UniformFloatHyperparameter(
+            name='C', lower=0.03125, upper=32768, log=True, default_value=1.0)
+        gamma = ConfigSpace.UniformFloatHyperparameter(
+            name='gamma', lower=3.0517578125e-05, upper=8, log=True, default_value=0.1)
+        config_space.add_hyperparameters([C, gamma])
+
         smbo = SequentialModelBasedOptimization()
-        smbo.initialize(sample_initial_configurations(10))
+        smbo.initialize(sample_initial_configurations(10, config_space))
 
         for idx in range(16):
             print('iteration %d/16' % idx)
             smbo.fit_model()
-            theta_new = smbo.select_configuration(sample_configurations(64))
+            theta_new = smbo.select_configuration(sample_configurations(64, config_space))
             performance = optimizee(theta_new[0], theta_new[1])
             smbo.update_runs((theta_new, performance))
+
+
+if __name__ == '__main__':
+    unittest = TestMetaModels()
+    unittest.test_optimize_svm()

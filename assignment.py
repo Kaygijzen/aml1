@@ -53,6 +53,7 @@ class SequentialModelBasedOptimization(object):
         configuration
         """
         ei = self.expected_improvement(self.model, self.theta_inc_performance, capital_theta)
+
         return capital_theta[np.argmax(ei)]
 
     @staticmethod
