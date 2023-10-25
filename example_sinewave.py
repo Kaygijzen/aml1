@@ -31,16 +31,22 @@ def sample_initial_configurations(n: int) -> typing.List[typing.Tuple[np.array, 
     return [(x, optimizee(x)) for x in configs]
 
 
-def plot_surrogate(smbo, init_configs, plot_resolution, output_dir):
+def plot_surrogate(smbo, init_configs, plot_resolution, output_dir, n_init):
     # plot surrogate
     input_values = np.linspace(X_MIN, X_MAX, plot_resolution)
     
     plt.plot(input_values, [optimizee([val]) for val in input_values], color='red', label='ground truth')
     plt.plot(input_values, smbo.model.predict(input_values.reshape([-1, 1])), color='blue', label='surrogate')
 
-    init_x_vals = [conf[0][0] for conf in init_configs]
-    init_y_vals = [conf[1] for conf in init_configs]
+    init_x_vals = [conf[0][0] for conf in init_configs[:n_init]]
+    init_y_vals = [conf[1] for conf in init_configs[:n_init]]
     plt.scatter(init_x_vals, init_y_vals, color='green', label='initial configs')
+
+    sampled_x_vals = [conf[0][0] for conf in init_configs[n_init:]]
+    sampled_y_vals = [conf[1] for conf in init_configs[n_init:]]
+    if len(sampled_x_vals) > 0:
+        plt.scatter(sampled_x_vals, sampled_y_vals, color='m', label='sampled configs')
+
     # plt.axvline(next_config, label='next config', c='g')
     plt.xlabel('Input')
     plt.xlim([X_MIN, X_MAX])
@@ -60,7 +66,7 @@ if __name__ == '__main__':
     init_configs = sample_initial_configurations(args.initial_configurations)
     smbo.initialize(init_configs)
     smbo.fit_model()
-    plot_surrogate(smbo, init_configs, args.plot_resolution, args.output_directory)
+    # plot_surrogate(smbo, init_configs, args.plot_resolution, args.output_directory, n_init=args.initial_configurations)
 
     input_values = np.linspace(X_MIN, X_MAX, 128).reshape(-1,1)
     for _ in range(5):
@@ -69,4 +75,7 @@ if __name__ == '__main__':
         performance = optimizee(next_config)
         smbo.update_runs((next_config, performance))
 
-    plot_surrogate(smbo, init_configs, args.plot_resolution, args.output_directory)
+    
+    plot_surrogate(smbo, init_configs[:args.initial_configurations], args.plot_resolution, args.output_directory, n_init=args.initial_configurations)
+
+    plot_surrogate(smbo, init_configs, args.plot_resolution, args.output_directory, n_init=args.initial_configurations)
