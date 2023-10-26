@@ -164,9 +164,7 @@ def svr_test(datasets, n_configs, smbo_n_init_configs=8, smbo_n_samples=128):
 
         test.run(n_configs, smbo_n_init_configs, smbo_n_samples)
 
-
         fig, ax = plt.subplots(1, 2, figsize=(10,5))
-
 
         ax[0].plot(test.grid_perf, label="Grid Search")
         ax[0].plot(test.rand_perf, label="Random Search")
@@ -196,7 +194,7 @@ def svr_test(datasets, n_configs, smbo_n_init_configs=8, smbo_n_samples=128):
         plt.show()
 
 
-def random_forest_test(datasets, n_configs):
+def random_forest_test(datasets, n_configs, smbo_n_init_configs=8, smbo_n_samples=128):
     hyperparameter_space = [
         UniformIntegerHyperparameter(
             name='n_estimators', lower=8, upper=512, log=True, default_value=32
@@ -225,8 +223,8 @@ def random_forest_test(datasets, n_configs):
             random_state=0
         )
 
-        # test.run(n_configs=n_configs)
-        # test.show()
+        test.run(n_configs, smbo_n_init_configs, smbo_n_samples)
+        test.show()
 
 
 
@@ -249,11 +247,8 @@ def main():
         'wine_quality': 43994
     }
 
-    # TODO : (optional) sommige datasets hebben pre-processing nodig van string bv naar one-hot encoding,
-    #        misschien gewoon makkelijke datasets kiezen die dit niet hebben om het zo makkelijk mogelijk te maken
-
     svr_test(datasets, n_configs=36, smbo_n_init_configs=8, smbo_n_samples=256)
-    # random_forest_test(datasets, n_configs=243)
+    random_forest_test(datasets, n_configs=36, smbo_n_init_configs=8, smbo_n_samples=256)
 
 
 if __name__ == '__main__':
